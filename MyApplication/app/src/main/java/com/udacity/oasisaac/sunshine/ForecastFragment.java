@@ -1,14 +1,19 @@
 package com.udacity.oasisaac.sunshine;
 
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -48,8 +53,37 @@ public class ForecastFragment extends Fragment {
         ListView listView = (ListView) view.findViewById(R.id.listview_forecast);
         listView.setAdapter(adapter);
 
+        setHasOptionsMenu(true);
 
         return view;
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.forecastfragment,menu);
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        String text = "";
+
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            text= getString(R.string.action_settings);
+        }
+
+        if (id == R.id.action_refresh) {
+            new DownloadFilesTask().execute("11280,mx");
+            text= getString(R.string.action_refresh) + " Calling async task";
+        }
+        Toast toast = Toast.makeText(getContext(), text, Toast.LENGTH_SHORT);
+        toast.show();
+
+        return super.onOptionsItemSelected(item);
     }
 
     private class DownloadFilesTask extends AsyncTask<String, Integer, Integer> {
@@ -64,9 +98,21 @@ public class ForecastFragment extends Fragment {
                 // Construct the URL for the OpenWeatherMap query
                 // Possible parameters are avaiable at OWM's forecast API page, at
                 // http://openweathermap.org/API#forecast
-                URL url = new URL("http://api.openweathermap.org/data/2.5/forecast/daily?q=94043&mode=json&units=metric&cnt=7");
-
-                // Create the request to OpenWeatherMap, and open the connection
+                Uri.Builder builder = new Uri.Builder();
+                builder.scheme("http")
+                        .authority("api.openweathermap.org")
+                        .appendPath("data")
+                        .appendPath("2.5")
+                        .appendPath("forecast")
+                        .appendPath("daily")
+                        .appendQueryParameter("zip", urls[0])
+                        .appendQueryParameter("mode", "json")
+                        .appendQueryParameter("units", "metrics")
+                        .appendQueryParameter("APPID", "e3a7019889573e626ae600cc0bb34b38");
+                String myUrl = builder.build().toString();
+                //URL url = new URL("http://api.openweathermap.org/data/2.5/forecast/daily?q=94043&mode=json&units=metric&cnt=7&APPID=e3a7019889573e626ae600cc0bb34b38");
+                URL url = new URL(myUrl);
+                        // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
@@ -93,6 +139,7 @@ public class ForecastFragment extends Fragment {
                     return null;
                 }
                 forecastJsonStr = buffer.toString();
+                Log.d("AsyncTask","Json:  "+ forecastJsonStr);
             } catch (IOException e) {
                 Log.e("PlaceholderFragment", "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
